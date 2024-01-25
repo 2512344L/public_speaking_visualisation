@@ -1,0 +1,55 @@
+body {
+    font-family: Arial, sans-serif;
+    color: #333;
+    background-color: #fff;
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    width: 80%;
+    margin: 0 auto;
+}
+
+@media (max-width: 600px) {
+    .container {
+        width: 95%;
+        background-color: lightblue;
+    }
+
+    body {
+    }
+}
+@media (min-width: 600px) and (max-width: 900px) {
+    .container {
+        width: 90%;
+    }
+
+    body {
+    }
+}
+
+@media (min-width: 900px) {
+    .container {
+        width: 85%;
+    }
+
+    body {
+    }
+}
+.App {
+  text-align: center;
+}
+.topBar{
+  background: dimgray;
+}
+#title{
+  color: aliceblue;
+  font-size: x-large;
+  margin-left: 0px;
+  font-weight: bolder;
+}
+#menu{
+  color: gold;
+  font-size: large;
+}

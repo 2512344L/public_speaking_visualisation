@@ -1,0 +1,23 @@
+.card-header{
+    font-size: xx-large;
+    color: #FCCF21;
+    font-weight: bolder;
+    padding: 10px
+}
+.card-text{
+    padding: 50px 250px;
+    font-weight: bold;
+}
+#upload{
+    font-size: xx-large;
+    color: #FCCF21;
+}
+#start{
+  padding: 10px 50px
+}
+.container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: auto;
+}

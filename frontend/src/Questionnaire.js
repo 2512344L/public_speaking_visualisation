@@ -5,22 +5,23 @@ import Stack from '@mui/material/Stack';
 import { styled } from '@mui/material/styles';
 import  './questionnaire.css';
 import {Card, Form} from "react-bootstrap";
-import {useState} from "react";
+import {useContext, useEffect, useState} from "react";
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import { useNavigate } from 'react-router-dom';
+import VideoContext from "./VideoContext";
 
 const Questionnaire = () => {
     const [alertVisible, setAlertVisible] = useState(true);
     const [fileName, setFileName] = useState("");
     const[file, setFile] = useState(null);
-    const[clear, setClear] = useState("");
     const [open, setOpen] = useState(false);
     const[gender, setGender] = useState('');
     const[age, setAge] = useState('');
     const [isVideoUploaded, setIsVideoUploaded] = useState(false);
+    const {videoUUID, setVideoUUID } = useContext(VideoContext);
     const navigate = useNavigate();
 
     const handleClickOpen = () => {
@@ -51,7 +52,6 @@ const Questionnaire = () => {
     if (file) {
         setFile(file);
         setFileName(file.name);
-        setClear(file.name);
     }
   };
 
@@ -63,12 +63,6 @@ const Questionnaire = () => {
       setGender(event.target.id);
   };
 
-
-  const handleClear = (event) => {
-      setClear(null);
-      setFileName("");
-
-  };
 
   const handleSubmit = async (event) => {
       event.preventDefault();
@@ -86,16 +80,8 @@ const Questionnaire = () => {
 
                 if (response.ok) {
                     const data = await response.json();
-                    const videoUUID = data.video_uuid;
+                    setVideoUUID(data.video_uuid);
                     setIsVideoUploaded(true);
-                    if(videoUUID){
-                        let path = `/voice?uuid=${videoUUID}`;
-                        navigate(path);
-                    }
-                    else{
-                        console.error('UUID is missing in the response');
-                    }
-
                 } else {
                     console.error('Upload failed');
                 }
@@ -107,6 +93,39 @@ const Questionnaire = () => {
                  alert("Please finish the questionnaire and upload the video")
             }
     };
+
+  useEffect(() => {
+    if (isVideoUploaded && videoUUID) {
+        let path = `/voice?uuid=${videoUUID}`;
+        navigate(path);
+    }
+}, [isVideoUploaded, videoUUID, navigate]);
+
+
+  const handleDeleteVideo = async () => {
+       setFile(null);
+       setFileName("");
+    if (videoUUID) {
+        try {
+            const response = await fetch('/delete_video', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ video_uuid: videoUUID }),
+            });
+
+            if (response.ok) {
+                setIsVideoUploaded(false);
+                setVideoUUID(null);
+            } else {
+                console.error('Failed to delete video');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    }
+};
 
   return (
       <>
@@ -197,7 +216,7 @@ const Questionnaire = () => {
                               </Button >
                               {fileName && <div style={{ color: 'grey', fontSize: '15px' }}>
                                   File: {fileName}
-                                  {fileName && <Button onClick={handleClear}>Clear</Button>}
+                                  {fileName && <Button onClick={handleDeleteVideo}>Clear</Button>}
                               </div>}
                           </p>
                           <Dialog open={open} onClose={handleClose} aria-describedby="alert-dialog-description">

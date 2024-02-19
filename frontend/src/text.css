@@ -1,0 +1,25 @@
+.word-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);  /* 每行显示 8 个单词 */
+  gap: 1px;
+}
+
+.word-item {
+  text-align: center;
+  padding: 2px;
+  column-gap: 1px;
+}
+
+.word-rectangle {
+  display: grid;
+  grid-template-columns: repeat(4,1fr); /* 调整这里以设置每个单词的最小宽度 */
+  grid-gap: 1px; /* 单词之间的间隔 */
+  max-width: 300px; /* 调整这里以设置长方形的最大宽度 */
+  margin: 2px; /* 居中显示 */
+}
+
+.word {
+  text-align: center; /* 单词居中对齐 */
+  padding: 1px; /* 单词内边距 */
+}
+

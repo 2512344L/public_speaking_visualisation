@@ -1,6 +1,6 @@
 import {TopBar} from "./App";
 import  './voice.css';
-import {useEffect, useState} from "react";
+import {useContext, useEffect, useState} from "react";
 import Accordion from '@mui/material/Accordion';
 import AccordionSummary from '@mui/material/AccordionSummary';
 import AccordionDetails from '@mui/material/AccordionDetails';
@@ -12,11 +12,20 @@ import CircularProgress from '@mui/material/CircularProgress';
 import axios from "axios";
 import Box from "@mui/material/Box";
 import {Divider} from "@mui/material";
+import Alert from "@mui/material/Alert";
+import Stack from "@mui/material/Stack";
+import {useNavigate} from "react-router-dom";
+import VideoContext from "./VideoContext";
+import Button from "@mui/material/Button";
+// import TranscriptContext from "./TranscriptContext";
 
 
 const Voice = () => {
-    const [imageBase64, setImageBase64] = useState('');
-    const[imageBase64_2, setImageBase64_2] = useState('');
+    const {videoUUID} = useContext(VideoContext);
+    // const{setTranscript} = useContext(TranscriptContext);
+
+    const [pitchImage, setPitchImage] = useState('');
+    const[intensityImage, setIntensityImage] = useState('');
     const[score, setScore] = useState('');
     const[title, setTitle] = useState('');
     const[time_h, setTimeh] = useState('');
@@ -25,15 +34,18 @@ const Voice = () => {
     const[intensity, setIntensity] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [isVideoUploaded, setIsVideoUploaded] = useState(true);
+    const navigate = useNavigate();
 
-   useEffect(() => {
-        let uuid = new URLSearchParams(window.location.search).get('uuid');
-        if (uuid) {
+    const [alertVisible, setAlertVisible] = useState(true);
+
+
+    useEffect(() => {
+          if (videoUUID) {
             setIsLoading(true);
-            axios(`http://127.0.0.1:5000/voice?uuid=${uuid}`)
+            axios(`http://127.0.0.1:5000/voice?uuid=${videoUUID}`)
                 .then(response =>{
-                    setImageBase64(response.data.pitch_image);
-                    setImageBase64_2(response.data.intensity_image);
+                    setPitchImage(response.data.pitch_image);
+                    setIntensityImage(response.data.intensity_image);
                     setScore(response.data.score);
                     setTitle(response.data.title);
                     setTimeh(response.data.time_h);
@@ -43,12 +55,31 @@ const Voice = () => {
                 })
                 .catch(error => {
                     console.error('Error:', error);
+                    navigate('/reload');
                 })
              .finally(() => {
                     setIsLoading(false);
                 });
         }
-    }, []);
+           else{
+               console.log("no uuid");
+                navigate('/reload');
+              }
+    }, [navigate, videoUUID]);
+
+// //预加载transcript
+//     useEffect(()=> {
+//         if(videoUUID){
+//             axios.get(`http://127.0.0.1:5000/text?uuid=${videoUUID}`)
+//                 .then(response => {
+//                     setTranscript(response.data.transcript);
+//                 })
+//                 .catch(error => {
+//                     console.error('Error to load transcript', error);
+//                 })
+//         }
+//         },[videoUUID, setTranscript]);
+
 
      if (isLoading) {
         return (
@@ -63,10 +94,26 @@ const Voice = () => {
             </Box>
   );
     }
+     const homepage = () =>{
+         navigate('/');
+     };
+
+     const text = () =>{
+         navigate(`/text?uuid=${videoUUID}`);
+     };
+
 
   return (
       <>
           <TopBar isVideoUploaded={isVideoUploaded}/>
+          <Stack sx={{ width: '100%' }} spacing={5}>
+              {alertVisible &&(
+              <Alert severity="warning"
+                     onClose={() => {setAlertVisible(false)}}>
+                  Notice: The video will only be saved for <strong>2 hours</strong>, please check it out as soon as possible! </Alert>
+                  )}
+
+          </Stack>
           <div>
               <div className="video-card">
                   <Card sx={{ maxWidth: '80%', marginTop: 5, width: 'auto'}}>
@@ -116,6 +163,8 @@ const Voice = () => {
                               {intensity} dB
                           </Typography>
                       </div>
+                      <Divider style={{ margin: '10px 18px' }} />
+
                   </AccordionDetails>
               </Accordion>
               <Accordion defaultExpanded>
@@ -145,7 +194,7 @@ const Voice = () => {
                        </Typography>
                       <Divider style={{ margin: '10px 10px' }} />
                       <Typography>
-                          {imageBase64 && <img src={`data:image/png;base64,${imageBase64}`} alt="Generated Plot" className="responsiveImage" />}
+                          {pitchImage && <img src={`data:image/png;base64,${pitchImage}`} alt="Generated Plot" className="responsiveImage"/>}
                       </Typography>
                   </AccordionDetails>
               </Accordion>
@@ -176,10 +225,14 @@ const Voice = () => {
                        </Typography>
                       <Divider style={{ margin: '10px 10px' }} />
                       <Typography>
-                          {imageBase64_2 && <img src={`data:image/png;base64,${imageBase64_2}`} alt="Generated Plot" className="responsiveImage" />}
+                          {intensityImage && <img src={`data:image/png;base64,${intensityImage}`} alt="Generated Plot" className="responsiveImage"/>}
                       </Typography>
                   </AccordionDetails>
               </Accordion>
+              <div style={{ marginTop: '40px', width: '100%', bottom: 0, display: 'flex', justifyContent: 'space-between', marginBottom: '20px'}}>
+                   <Button variant="contained" onClick={homepage} style={{marginLeft: '10px'}}>Go back to Home</Button>
+                  <Button variant="contained" onClick={text} style={{marginRight: '10px'}}>Go to Voice page</Button>
+              </div>
           </div>
       </>
   );

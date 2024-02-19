@@ -1,19 +1,20 @@
-import base64
 import threading
-import time
-import uuid
-from io import BytesIO
-
 import matplotlib
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 import parselmouth
-import matplotlib.pyplot as plt
-from matplotlib.patches import Arc
-import numpy as np
-from moviepy.editor import VideoFileClip
 import os
+
+from speed_of_speech import speed_for_one_segment, draw_speed
+from distinguish_word import evaluate_text_difficulty, pie_plot
+from transcript import text_to_sentence, split_audio_on_silence_with_timing, recognize_segments
+from intensity import mean_intensity, draw_intensity, intensity
+from pitch import mean_pitch, pitch, draw_pitch
+from video_to_wav import covert_video_to_wav, delete_file_later
+from voice_score import pitch_score, intensity_score, score, draw_score
+from sentence_length import sentence_length
 from models import db, Video
+
 from flask_admin import Admin
 from flask_admin.contrib.sqla import ModelView
 import uuid
@@ -23,206 +24,17 @@ CORS(app)
 
 matplotlib.use('Agg')
 
+# Create database
 current_dir = os.path.dirname(os.path.abspath(__file__))
-
 parent_dir = os.path.dirname(current_dir)
-
 new_db_path = os.path.join(parent_dir, 'ip.db')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///{}'.format(new_db_path)
-
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
 db.init_app(app)
-
 with app.app_context():
     db.create_all()
-
 admin = Admin(app, name='Admin', template_mode='bootstrap3')
 admin.add_view(ModelView(Video, db.session))
-
-
-def covert_video_to_wav(filepath):
-    video_clip = VideoFileClip(filepath)
-    audio = video_clip.audio
-    file_path, _ = os.path.splitext(filepath)
-    audio_file_name = file_path + ".wav"
-    audio.write_audiofile(audio_file_name, verbose=False, logger=None)
-    return audio_file_name
-
-
-# PITCH
-def mean_pitch(snd, low_range, high_range):
-    pitch = snd.to_pitch(time_step=0.1, pitch_ceiling=high_range)
-    pitch_values = pitch.selected_array['frequency']
-    selected_pitches = [p for p in pitch_values if low_range <= p]
-    mean_pitch = np.mean(selected_pitches)
-    return mean_pitch
-
-
-def pitch(snd, low_range, high_range):
-    pitch = snd.to_pitch(time_step=0.5, pitch_ceiling=high_range)
-
-    pitch_values = pitch.selected_array['frequency']
-    times = pitch.xs()
-    window_size = 4.0
-
-    window_starts = np.arange(0, times[-1], window_size)
-    average_pitches = []
-
-    for start in window_starts:
-        end = start + window_size
-        mask = (times >= start) & (times < end) & (pitch_values >= low_range)
-        pitches_in_window = pitch_values[mask]
-        average_pitch = np.mean(pitches_in_window) if pitches_in_window.size > 0 else 0
-        average_pitches.append(average_pitch)
-
-    return average_pitches, window_starts, window_size
-
-
-def draw_pitch(average_pitches, window_starts, window_size, average_r, average_user, ten_percent, ninty_percent):
-    plt.figure(figsize=(13, 4))
-    filtered_pitches = [pitch if pitch >= 120 else None for pitch in average_pitches]
-    plt.plot(window_starts, filtered_pitches)
-    # average pitch
-    plt.xlabel("Time (mins)")
-    plt.ylabel("Pitch (Hz)")
-    show_time = np.arange(0, max(window_starts) + window_size, 60)
-    # average pitch
-    plt.axhline(average_r, linestyle="-.", color='orange')
-
-    # recommend average
-    plt.axhline(average_user, linestyle="-.", color='green')
-    # recommend range
-    plt.fill_between(window_starts, ten_percent, ninty_percent, alpha=0.2)
-    plt.xticks(ticks=show_time, rotation=30,
-               labels=[f"{int(t / 60)} min" if t % 60 == 0 else f"{t}s" for t in show_time])
-
-    ax = plt.gca()
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-
-    buf = BytesIO()
-    plt.savefig(buf, format='png')
-    buf.seek(0)
-    img_base64 = base64.b64encode(buf.getvalue()).decode('utf-8')
-    buf.close()
-
-    return img_base64
-
-
-def pitch_score(average_pitches, ten_percent, ninty_percent, user_mean, r_mean):
-    points_in_range = 0
-    for pitch in average_pitches:
-        if ten_percent <= pitch <= ninty_percent:
-            points_in_range += 1
-
-    total_points = len(average_pitches)
-    percentage = (points_in_range / total_points)
-
-    diff = abs(user_mean - r_mean)
-    score = np.exp(-diff / 50)
-
-    per = (0.6 * percentage + score * 0.4) * 100
-
-    return per
-
-
-# INTENSITY
-def mean_intensity(snd, low_range, pitch_min_range):
-    intensity = snd.to_intensity(time_step=0.1, minimum_pitch=pitch_min_range)
-    intensity_values = intensity.values.T
-    selected_intensity = [i for i in intensity_values if low_range <= i]
-    mean_intensity = np.mean(selected_intensity)
-    return mean_intensity
-
-
-def intensity(snd, low_range, pitch_min_range):
-    intensity = snd.to_intensity(time_step=0.5, minimum_pitch=pitch_min_range, subtract_mean=True)
-    intensity_values = np.array(intensity.values).flatten()
-    times = np.array(intensity.xs())
-
-    window_size = 4.0
-    window_starts = np.arange(0, times[-1], window_size)
-    average_intensities = []
-
-    for start in window_starts:
-        end = start + window_size
-        mask = (times >= start) & (times < end) & (intensity_values >= low_range)
-        intensities_in_window = intensity_values[mask]
-        average_intensity = np.mean(intensities_in_window) if len(intensities_in_window) > 0 else 0
-        average_intensities.append(average_intensity)
-
-    return average_intensities, window_starts, window_size
-
-
-def draw_intensity(average_intensities, window_starts, window_size, average_r, average_user, ten_percent,
-                   ninty_percent):
-    plt.figure(figsize=(13, 4))
-    filtered_intensity = [intensity if intensity >= 30 else None for intensity in average_intensities]
-    plt.plot(window_starts, filtered_intensity)
-    plt.xlabel("Time (mins)")
-    plt.ylabel("Intensity (dB)")
-    show_time = np.arange(0, max(window_starts) + window_size, 60)
-
-    plt.axhline(average_r, linestyle="-.", color='orange')
-    plt.axhline(average_user, linestyle="-.", color='green')
-
-    plt.fill_between(window_starts, ten_percent, ninty_percent, alpha=0.2)
-    plt.xticks(ticks=show_time, rotation=30,
-               labels=[f"{int(t / 60)} min" if t % 60 == 0 else f"{t}s" for t in show_time])
-
-    ax = plt.gca()
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-
-    buf = BytesIO()
-    plt.savefig(buf, format='png')
-    buf.seek(0)
-    img_base64 = base64.b64encode(buf.getvalue()).decode('utf-8')
-    buf.close()
-    return img_base64
-
-
-def intensity_score(average_intensities, ten_percent, ninty_percent, user_mean, r_mean):
-    points_in_range = 0
-    for intensity in average_intensities:
-        if ten_percent <= intensity <= ninty_percent:
-            points_in_range += 1
-    total_points = len(average_intensities)
-    percentage = (points_in_range / total_points)
-
-    diff = abs(user_mean - r_mean)
-    score = np.exp(-diff / 50)
-
-    per = (0.6 * percentage + score * 0.4) * 100
-    return per
-
-
-def score(pitch_score, intensity_score):
-    return 0.5 * pitch_score + 0.5 * intensity_score
-
-
-def draw_score(score):
-    fig, ax = plt.subplots()
-    arc = Arc([0.5, 0.5], 0.5, 0.5, angle=0, theta1=0, theta2=180, linewidth=20, color="orange")
-    ax.add_patch(arc)
-    arc = Arc([0.5, 0.5], 0.5, 0.5, angle=0, theta1=0, theta2=180 * (1 - score / 100), linewidth=20, color="gray")
-    ax.add_patch(arc)
-
-    plt.text(0.5, 0.55, f'{score:.1f}', ha='center', va='center', fontsize=20, color='orange')
-    plt.text(0.5, 0.45, 'Score', ha='center', va='center', fontsize=15)
-
-    ax.set_aspect('equal')
-    ax.axis('off')
-
-    plt.show()
-
-    buf = BytesIO()
-    plt.savefig(buf, format='png')
-    buf.seek(0)
-    img_base64 = base64.b64encode(buf.getvalue()).decode('utf-8')
-    buf.close()
-    return img_base64
 
 
 @app.route('/voice')
@@ -410,13 +222,43 @@ def draw():
         return jsonify({"error": "Video ID Not Found"})
 
 
-# Store video to static
-def delete_file_later(path, delay):
-    # After fix time to delete the video
-    time.sleep(delay)
-    if os.path.exists(path):
-        os.remove(path)
-        print(f"Deleted file: {path}")
+
+@app.route('/text')
+def text():
+    video_id = request.args.get('uuid')
+    if video_id:
+        video = Video.query.filter_by(id=video_id).first()
+        title = video.title
+        new_title = title.replace(".mp4", ".wav")
+        filepath = os.path.join("static", new_title)
+        segments_timing, total_time = split_audio_on_silence_with_timing(filepath)
+        segments, transcript = recognize_segments(segments_timing)
+        sentence = text_to_sentence(transcript)
+        simple, difficult, simple_p, diff_p, simple_list, diff_list = evaluate_text_difficulty(transcript)
+        word_plot = pie_plot(simple_p, diff_p)
+        segments_speed, average_speed = speed_for_one_segment(segments)
+        speed_picture = draw_speed(total_time, segments_speed, average_speed)
+        length_average, length = sentence_length(segments)
+        if video:
+            title = video.title
+            return jsonify(
+                {'title': title,
+                 'transcript': sentence,
+                 'simple': simple,
+                 'difficult': difficult,
+                 'simple_show': simple_list,
+                 'diff_show': diff_list,
+                 'word_plot': word_plot,
+                 'speed_plot': speed_picture,
+                 'sentence_length': length_average,
+                 'total_length': length,
+                 'average_speed': f"{average_speed: .2f}"
+                 }
+            )
+        else:
+            return jsonify({"error": "Video Not Found"})
+    else:
+        return jsonify({"error": "Video ID Not Found"})
 
 
 def allowed_file(filename):
@@ -445,6 +287,17 @@ def upload():
         thread.start()
     db.session.commit()
     return jsonify(video_uuid=video_uuid)
+
+
+@app.route('/delete_video', methods=['POST'])
+def delete_video():
+    video_uuid = request.json.get('video_uuid')
+    video = Video.query.get(video_uuid)
+    if video:
+        db.session.delete(video)
+        db.session.commit()
+        return jsonify({'message': 'Video deleted successfully'}), 200
+    return jsonify({'message': 'Video not found'}), 404
 
 
 if __name__ == '__main__':

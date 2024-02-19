@@ -4,6 +4,8 @@ import {BrowserRouter as Router, Routes, Route, useNavigate} from 'react-router-
 import HomePage from './HomePage';
 import Questionnaire from './Questionnaire';
 import Voice from "./voice";
+import Text from "./Text";
+import VideoContext, { VideoProvider } from './VideoContext';
 
 import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
@@ -15,7 +17,10 @@ import MenuIcon from '@mui/icons-material/Menu';
 import Container from '@mui/material/Container';
 import Button from '@mui/material/Button';
 import MenuItem from '@mui/material/MenuItem';
-import {useState} from "react";
+import {useContext, useState} from "react";
+import Reload from "./reload";
+import {TranscriptProvider} from "./TranscriptContext";
+
 
 function TopBar({ isVideoUploaded }) {
   const [anchorElNav, setAnchorElNav] = useState(null);
@@ -27,10 +32,18 @@ function TopBar({ isVideoUploaded }) {
   const settings = ['Profile', 'Account', 'Dashboard', 'Logout'];
 
 
+  const { videoUUID, setVideoUUID } = useContext(VideoContext);
+
   const navigateToPage = (page) => {
-      const route = page === 'Homepage' ? '' : page.toLowerCase();
-      navigate(`/${route}`);
-};
+    if (page === 'Homepage') {
+      setVideoUUID(null);
+      navigate("/");
+    }
+    else{
+        const route = page.toLowerCase();
+        navigate(`/${route}?uuid=${videoUUID}`);
+    }
+  };
 
   const handleOpenNavMenu = (event) => {
     setAnchorElNav(event.currentTarget);
@@ -99,7 +112,7 @@ function TopBar({ isVideoUploaded }) {
               }}
             >
               {pages.map((page) => (
-                <MenuItem key={page} onClick={handleCloseNavMenu}>
+                <MenuItem key={page} onClick={() => { handleCloseNavMenu(); navigateToPage(page); }}>
                   <Typography textAlign="center">{page}</Typography>
                 </MenuItem>
               ))}
@@ -167,13 +180,19 @@ function TopBar({ isVideoUploaded }) {
 
 function App() {
   return (
-    <Router>
-      <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/questionnaire" element={<Questionnaire />} />
-          <Route path="/voice" element={<Voice />} />
-      </Routes>
-    </Router>
+      <VideoProvider>
+          {/*<TranscriptProvider>*/}
+          <Router>
+              <Routes>
+                  <Route path="/" element={<HomePage />} />
+                  <Route path="/questionnaire" element={<Questionnaire />} />
+                  <Route path="/voice" element={<Voice />} />
+                  <Route path="/text" element={<Text />} />
+                  <Route path="/reload" element={<Reload />} />
+              </Routes>
+          </Router>
+          {/*</TranscriptProvider>*/}
+      </VideoProvider>
   );
 }
 export default App;

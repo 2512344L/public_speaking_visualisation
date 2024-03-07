@@ -1,199 +1,50 @@
 import './App.css';
 
-import {BrowserRouter as Router, Routes, Route, useNavigate} from 'react-router-dom';
+import {BrowserRouter as Router, Routes, Route} from 'react-router-dom';
 import HomePage from './HomePage';
 import Questionnaire from './Questionnaire';
 import Voice from "./voice";
 import Text from "./Text";
-import VideoContext, { VideoProvider } from './VideoContext';
+import { VideoProvider } from './VideoContext';
 
-import AppBar from '@mui/material/AppBar';
-import Box from '@mui/material/Box';
-import Toolbar from '@mui/material/Toolbar';
-import IconButton from '@mui/material/IconButton';
-import Typography from '@mui/material/Typography';
-import Menu from '@mui/material/Menu';
-import MenuIcon from '@mui/icons-material/Menu';
-import Container from '@mui/material/Container';
-import Button from '@mui/material/Button';
-import MenuItem from '@mui/material/MenuItem';
-import {useContext, useState} from "react";
+import {useState} from "react";
 import Reload from "./reload";
-import {TranscriptProvider} from "./TranscriptContext";
-
-
-function TopBar({ isVideoUploaded }) {
-  const [anchorElNav, setAnchorElNav] = useState(null);
-  const [anchorElUser, setAnchorElUser] = useState(null);
-  const navigate = useNavigate();
-
-  const basePages = ['Homepage'];
-  const pages = isVideoUploaded ? [...basePages, 'Voice', 'Text'] : basePages;
-  const settings = ['Profile', 'Account', 'Dashboard', 'Logout'];
-
-
-  const { videoUUID, setVideoUUID } = useContext(VideoContext);
-
-  const navigateToPage = (page) => {
-    if (page === 'Homepage') {
-      setVideoUUID(null);
-      navigate("/");
-    }
-    else{
-        const route = page.toLowerCase();
-        navigate(`/${route}?uuid=${videoUUID}`);
-    }
-  };
-
-  const handleOpenNavMenu = (event) => {
-    setAnchorElNav(event.currentTarget);
-  };
-  const handleOpenUserMenu = (event) => {
-    setAnchorElUser(event.currentTarget);
-  };
-
-  const handleCloseNavMenu = () => {
-    setAnchorElNav(null);
-  };
-
-  const handleCloseUserMenu = () => {
-    setAnchorElUser(null);
-  };
-
-  return (
-    <AppBar position="static">
-      <Container maxWidth="xl">
-        <Toolbar disableGutters>
-          <Typography
-            variant="h6"
-            noWrap
-            component="a"
-            href="/"
-            sx={{
-              mr: 2,
-              display: { xs: 'none', md: 'flex' },
-              fontFamily: 'monospace',
-              fontWeight: 700,
-              letterSpacing: '.3rem',
-              color: 'inherit',
-              textDecoration: 'none',
-            }}
-          >
-            SpeakTrainer
-          </Typography>
-
-          <Box sx={{ flexGrow: 1, display: { xs: 'flex', md: 'none' } }}>
-            <IconButton
-              size="large"
-              aria-label="account of current user"
-              aria-controls="menu-appbar"
-              aria-haspopup="true"
-              onClick={handleOpenNavMenu}
-              color="inherit"
-            >
-              <MenuIcon />
-            </IconButton>
-            <Menu
-              id="menu-appbar"
-              anchorEl={anchorElNav}
-              anchorOrigin={{
-                vertical: 'bottom',
-                horizontal: 'left',
-              }}
-              keepMounted
-              transformOrigin={{
-                vertical: 'top',
-                horizontal: 'left',
-              }}
-              open={Boolean(anchorElNav)}
-              onClose={handleCloseNavMenu}
-              sx={{
-                display: { xs: 'block', md: 'none' },
-              }}
-            >
-              {pages.map((page) => (
-                <MenuItem key={page} onClick={() => { handleCloseNavMenu(); navigateToPage(page); }}>
-                  <Typography textAlign="center">{page}</Typography>
-                </MenuItem>
-              ))}
-            </Menu>
-          </Box>
-          <Typography
-            variant="h5"
-            noWrap
-            component="a"
-            href="/"
-            sx={{
-              mr: 2,
-              display: { xs: 'flex', md: 'none' },
-              flexGrow: 1,
-              fontFamily: 'monospace',
-              fontWeight: 700,
-              letterSpacing: '.3rem',
-              color: 'inherit',
-              textDecoration: 'none',
-            }}
-          >
-            SpeakTrainer
-          </Typography>
-          <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' } }}>
-            {pages.map((page) => (
-              <Button
-                key={page}
-                onClick={() => { handleCloseNavMenu(); navigateToPage(page); }}
-                sx={{ my: 2, color: 'white', display: 'block' }}
-              >
-                {page}
-              </Button>
-            ))}
-          </Box>
-
-          <Box sx={{ flexGrow: 0 }}>
-            <Menu
-              sx={{ mt: '45px' }}
-              id="menu-appbar"
-              anchorEl={anchorElUser}
-              anchorOrigin={{
-                vertical: 'top',
-                horizontal: 'right',
-              }}
-              keepMounted
-              transformOrigin={{
-                vertical: 'top',
-                horizontal: 'right',
-              }}
-              open={Boolean(anchorElUser)}
-              onClose={handleCloseUserMenu}
-            >
-              {settings.map((setting) => (
-                <MenuItem key={setting} onClick={handleCloseUserMenu}>
-                  <Typography textAlign="center">{setting}</Typography>
-                </MenuItem>
-              ))}
-            </Menu>
-          </Box>
-        </Toolbar>
-      </Container>
-    </AppBar>
-  );
-}
+import Login from "./login";
+import TopBar from "./TopBar";
+import Register from "./register";
+import Compare from "./Compare";
+import CompareWith from "./compareWith";
+import StepperPage from "./Step";
+import Profile from "./profile";
 
 function App() {
+    const [auth, setAuth] = useState(false);
+    const [user, setUser] = useState({ username: '', email: '' });
+
+    const handleAuth = (isLoggedIn, user) => {
+        setAuth(isLoggedIn);
+        setUser(user);
+  };
+
   return (
       <VideoProvider>
-          {/*<TranscriptProvider>*/}
           <Router>
+              <TopBar auth={auth} user={user} setAuth={handleAuth} />
               <Routes>
                   <Route path="/" element={<HomePage />} />
+                  <Route path ='login' element={<Login setAuth={handleAuth}/>} />
+                  <Route path='register' element={<Register />} />
                   <Route path="/questionnaire" element={<Questionnaire />} />
                   <Route path="/voice" element={<Voice />} />
                   <Route path="/text" element={<Text />} />
+                  <Route path='/compare' element={<Compare />} />
+                  <Route path='/compare_with' element={<CompareWith />} />
                   <Route path="/reload" element={<Reload />} />
+                  <Route path="/step" element={<StepperPage />} />
+                  <Route path='/profile' element={<Profile />} />
               </Routes>
           </Router>
-          {/*</TranscriptProvider>*/}
       </VideoProvider>
   );
 }
 export default App;
-export {TopBar};

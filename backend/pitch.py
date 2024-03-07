@@ -84,3 +84,5 @@ def draw_pitch(average_pitches, window_starts, window_size, average_r, average_u
     plt.close()
 
     return img_base64
+
+

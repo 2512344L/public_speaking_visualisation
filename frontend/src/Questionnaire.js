@@ -1,4 +1,4 @@
-import {TopBar} from "./App";
+
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import Stack from '@mui/material/Stack';
@@ -20,8 +20,9 @@ const Questionnaire = () => {
     const [open, setOpen] = useState(false);
     const[gender, setGender] = useState('');
     const[age, setAge] = useState('');
-    const [isVideoUploaded, setIsVideoUploaded] = useState(false);
     const {videoUUID, setVideoUUID } = useContext(VideoContext);
+    const [allowNavigate, setAllowNavigate] = useState(false);
+    const auth = JSON.parse(sessionStorage.getItem('auth'));
     const navigate = useNavigate();
 
     const handleClickOpen = () => {
@@ -73,7 +74,7 @@ const Questionnaire = () => {
              formData.append('file', file);
 
             try {
-                const response = await fetch('/upload', {
+                const response = await fetch(`/upload?email=${auth?.email || ''}`, {
                     method: 'POST',
                     body: formData,
                 });
@@ -81,7 +82,7 @@ const Questionnaire = () => {
                 if (response.ok) {
                     const data = await response.json();
                     setVideoUUID(data.video_uuid);
-                    setIsVideoUploaded(true);
+                    setAllowNavigate(true);
                 } else {
                     console.error('Upload failed');
                 }
@@ -95,11 +96,11 @@ const Questionnaire = () => {
     };
 
   useEffect(() => {
-    if (isVideoUploaded && videoUUID) {
-        let path = `/voice?uuid=${videoUUID}`;
+    if (videoUUID && allowNavigate) {
+        let path = `/voice?uuid=${videoUUID}&email=${auth?.email || ''}`;
         navigate(path);
     }
-}, [isVideoUploaded, videoUUID, navigate]);
+}, [videoUUID, navigate, allowNavigate]);
 
 
   const handleDeleteVideo = async () => {
@@ -116,7 +117,6 @@ const Questionnaire = () => {
             });
 
             if (response.ok) {
-                setIsVideoUploaded(false);
                 setVideoUUID(null);
             } else {
                 console.error('Failed to delete video');
@@ -129,7 +129,6 @@ const Questionnaire = () => {
 
   return (
       <>
-          <TopBar isVideoUploaded={isVideoUploaded}/>
           <Stack sx={{ width: '100%' }} spacing={5}>
               {alertVisible &&(
               <Alert severity="warning"
@@ -214,11 +213,12 @@ const Questionnaire = () => {
                               <Button component="label">Upload Video
                                   <VisuallyHiddenInput type="file" onChange={handleFileChange} accept="video/mp4"/>
                               </Button >
-                              {fileName && <div style={{ color: 'grey', fontSize: '15px' }}>
-                                  File: {fileName}
-                                  {fileName && <Button onClick={handleDeleteVideo}>Clear</Button>}
-                              </div>}
                           </p>
+                              {fileName &&
+                                  <div style={{ color: 'grey', fontSize: '15px' }}>
+                                      File: {fileName}
+                                      {fileName && <Button onClick={handleDeleteVideo}>Clear</Button>}
+                                  </div>}
                           <Dialog open={open} onClose={handleClose} aria-describedby="alert-dialog-description">
                               <DialogContent>
                                   <DialogContentText id="alert-dialog-description">

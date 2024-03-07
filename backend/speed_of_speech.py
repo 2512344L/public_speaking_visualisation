@@ -1,8 +1,6 @@
 import base64
 from io import BytesIO
 
-from nltk.corpus import cmudict
-import nltk
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -20,7 +18,7 @@ def speed_for_one_segment(segments):
         total_words += word_count
         total_duration += duration
         # 计算每个段落的单词阅读速率（单词）
-        segment_wpm = word_count / (duration)
+        segment_wpm = word_count / duration
         segments_speed.append((end / 1000, segment_wpm))
 
     # 计算整体平均速度（单词/分钟）
@@ -64,7 +62,7 @@ def draw_speed(total_time, segments_speed, average_speed):
     time_labels = [format_time(t) for t in time_points]
 
     # 绘图
-    plt.figure(figsize=(13, 5))
+    plt.figure(figsize=(13, 4))
     plt.plot(time_labels, averaged_speeds)
     plt.axhline(y=average_speed, color='green', linestyle='-.')
     plt.ylabel('Word Speed (Words/Minute)')

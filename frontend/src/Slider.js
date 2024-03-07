@@ -6,16 +6,12 @@ const Slider = ({ value1, value2 }) => {
   let position2;
 
   if (value1 <= 25) {
-    // 第一段，0 - 25
     position1 = `${value1 * 1.25}%`;
     position2 = `${value2 * 1.25}%`;
   } else if (value1 <= 45) {
-    // 第二段，25 - 45
     position1 = `${value1 * 1.25}%`;
     position2 = `${value2 * 1.25}%`
   } else {
-    // 第三段，> 45
-    // 假设值不会超过100，这样超过45的值将会被放置在第三段的相对位置
     position1 = `${value1 * 1.25}%`;
     position2 = `${value2 * 1.25}%`
   }

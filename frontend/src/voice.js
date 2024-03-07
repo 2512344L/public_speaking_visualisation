@@ -1,4 +1,3 @@
-import {TopBar} from "./App";
 import  './voice.css';
 import {useContext, useEffect, useState} from "react";
 import Accordion from '@mui/material/Accordion';
@@ -11,18 +10,18 @@ import Card from "@mui/material/Card";
 import CircularProgress from '@mui/material/CircularProgress';
 import axios from "axios";
 import Box from "@mui/material/Box";
-import {Divider} from "@mui/material";
+import {Divider, Tooltip} from "@mui/material";
 import Alert from "@mui/material/Alert";
 import Stack from "@mui/material/Stack";
 import {useNavigate} from "react-router-dom";
 import VideoContext from "./VideoContext";
 import Button from "@mui/material/Button";
-// import TranscriptContext from "./TranscriptContext";
-
+import IconButton from "@mui/material/IconButton";
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 
 const Voice = () => {
     const {videoUUID} = useContext(VideoContext);
-    // const{setTranscript} = useContext(TranscriptContext);
+    const auth = JSON.parse(sessionStorage.getItem('auth'));
 
     const [pitchImage, setPitchImage] = useState('');
     const[intensityImage, setIntensityImage] = useState('');
@@ -33,16 +32,19 @@ const Voice = () => {
     const[pitch, setPitch] = useState('');
     const[intensity, setIntensity] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [isVideoUploaded, setIsVideoUploaded] = useState(true);
     const navigate = useNavigate();
 
     const [alertVisible, setAlertVisible] = useState(true);
 
 
+
     useEffect(() => {
           if (videoUUID) {
             setIsLoading(true);
-            axios(`http://127.0.0.1:5000/voice?uuid=${videoUUID}`)
+            axios(`http://127.0.0.1:5000/voice?uuid=${videoUUID}&email=${auth?.email || ''}`,
+                {
+                    withCredentials: true,
+            })
                 .then(response =>{
                     setPitchImage(response.data.pitch_image);
                     setIntensityImage(response.data.intensity_image);
@@ -67,19 +69,6 @@ const Voice = () => {
               }
     }, [navigate, videoUUID]);
 
-// //预加载transcript
-//     useEffect(()=> {
-//         if(videoUUID){
-//             axios.get(`http://127.0.0.1:5000/text?uuid=${videoUUID}`)
-//                 .then(response => {
-//                     setTranscript(response.data.transcript);
-//                 })
-//                 .catch(error => {
-//                     console.error('Error to load transcript', error);
-//                 })
-//         }
-//         },[videoUUID, setTranscript]);
-
 
      if (isLoading) {
         return (
@@ -99,13 +88,12 @@ const Voice = () => {
      };
 
      const text = () =>{
-         navigate(`/text?uuid=${videoUUID}`);
+         navigate(`/text?uuid=${videoUUID}&email=${auth?.email || ''}`);
      };
 
 
   return (
       <>
-          <TopBar isVideoUploaded={isVideoUploaded}/>
           <Stack sx={{ width: '100%' }} spacing={5}>
               {alertVisible &&(
               <Alert severity="warning"
@@ -169,7 +157,28 @@ const Voice = () => {
               </Accordion>
               <Accordion defaultExpanded>
                   <AccordionSummary expandIcon={<ExpandMoreIcon />} aria-controls="panel2a-content" id="panel2a-header">
-                      <Typography variant={'h5'}>Pitch</Typography>
+                      <Typography variant={'h5'}>Pitch
+                         <Tooltip title={
+                             <Typography style={{ fontSize: '1rem' }}>
+                                  If your pitch is too low, which might make your speech less engaging,
+                                 work on elevating it by practicing vocal exercises and experimenting with higher pitch levels in your delivery. For a pitch that's too high,
+                                 possibly causing discomfort or difficulty in understanding,
+                                 practice lowering it slightly and incorporating a wider range of tones to ensure clarity and maintain interest without straining your audience's ears.
+                             </Typography>} arrow
+                                  sx={{
+                                      '.MuiTooltip-tooltip': {
+                                          backgroundColor: 'gray',
+                                          color: 'white',
+                                          fontSize: '1rem',
+                                          padding: '16px 20px',
+                                      }
+                         }}
+                         >
+                              <IconButton aria-label="help">
+                                  <HelpOutlineIcon />
+                              </IconButton>
+                          </Tooltip>
+                      </Typography>
                   </AccordionSummary>
                   <Divider style={{ margin: '10px 18px' }} />
                   <AccordionDetails>
@@ -200,7 +209,27 @@ const Voice = () => {
               </Accordion>
               <Accordion defaultExpanded>
                   <AccordionSummary expandIcon={<ExpandMoreIcon />} aria-controls="panel2a-content" id="panel2a-header">
-                      <Typography variant={'h5'}>Intensity</Typography>
+                      <Typography variant={'h5'}>Intensity
+                          <Tooltip title={
+                             <Typography style={{ fontSize: '1rem' }}>
+                                If your intensity is too low, indicating potential lack of confidence,
+                                 boost it by practicing and becoming more familiar with your content.
+                                 For too high intensity, suggesting aggression, try to practice pacing and use pauses to moderate it
+                             </Typography>} arrow
+                                  sx={{
+                                      '.MuiTooltip-tooltip': {
+                                          backgroundColor: 'gray',
+                                          color: 'white',
+                                          fontSize: '1rem',
+                                          padding: '16px 20px',
+                                      }
+                         }}
+                         >
+                              <IconButton aria-label="help">
+                                  <HelpOutlineIcon />
+                              </IconButton>
+                          </Tooltip>
+                      </Typography>
                   </AccordionSummary>
                   <Divider style={{ margin: '10px 18px' }} />
                   <AccordionDetails>
@@ -231,7 +260,7 @@ const Voice = () => {
               </Accordion>
               <div style={{ marginTop: '40px', width: '100%', bottom: 0, display: 'flex', justifyContent: 'space-between', marginBottom: '20px'}}>
                    <Button variant="contained" onClick={homepage} style={{marginLeft: '10px'}}>Go back to Home</Button>
-                  <Button variant="contained" onClick={text} style={{marginRight: '10px'}}>Go to Voice page</Button>
+                  <Button variant="contained" onClick={text} style={{marginRight: '10px'}}>Go to Text page</Button>
               </div>
           </div>
       </>

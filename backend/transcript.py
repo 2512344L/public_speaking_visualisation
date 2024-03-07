@@ -50,7 +50,7 @@ def recognize_segments(segments_timing):
             with sr.AudioFile(tmpfile.name) as source:
                 audio_data = recognizer.record(source)
                 try:
-                    text = recognizer.recognize_google(audio_data)
+                    text = recognizer.recognize_sphinx(audio_data)
                     results.append((start_ms, end_ms, text))
                     full_transcript += " " + text
                 except sr.UnknownValueError:
@@ -59,6 +59,7 @@ def recognize_segments(segments_timing):
                     results.append((start_ms, end_ms, f"error: {e}"))
 
     return results, full_transcript.strip()
+
 
 def text_to_sentence(text):
     nlp = spacy.load('en_core_web_sm')

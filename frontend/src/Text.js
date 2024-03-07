@@ -1,4 +1,3 @@
-import {TopBar} from "./App";
 import  './voice.css';
 import {useContext, useEffect, useState} from "react";
 import Accordion from '@mui/material/Accordion';
@@ -11,7 +10,7 @@ import Card from "@mui/material/Card";
 import CircularProgress from '@mui/material/CircularProgress';
 import axios from "axios";
 import Box from "@mui/material/Box";
-import {Divider, ListItem, ListItemText} from "@mui/material";
+import {Divider, Tooltip,} from "@mui/material";
 import Alert from "@mui/material/Alert";
 import Stack from "@mui/material/Stack";
 import {useNavigate} from "react-router-dom";
@@ -24,15 +23,17 @@ import DialogActions from "@mui/material/DialogActions";
 import Button from "@mui/material/Button";
 import './text.css'
 import Slider from "./Slider";
+import IconButton from "@mui/material/IconButton";
+import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 // import TranscriptContext from "./TranscriptContext";
 
 
 const Text = () => {
     const {videoUUID } = useContext(VideoContext);
+     const auth = JSON.parse(sessionStorage.getItem('auth'));
 
     const[title, setTitle] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-    const [isVideoUploaded] = useState(true);
+    const[isLoading, setIsLoading] = useState(false);
     const[transcript, setTranscript] = useState('');
     const[simple, setSimple] = useState([]);
     const[diff, setDiff] = useState([]);
@@ -49,10 +50,13 @@ const Text = () => {
     const [open, setOpen] = useState(false);
 
 
+
    useEffect(() => {
         if (videoUUID) {
             setIsLoading(true);
-            axios(`http://127.0.0.1:5000/text?uuid=${videoUUID}`)
+            axios(`http://127.0.0.1:5000/text?uuid=${videoUUID}&email=${auth?.email || ''}`, {
+                withCredentials: true,
+            })
                 .then(response =>{
                    setTitle(response.data.title);
                    setTranscript(response.data.transcript);
@@ -96,7 +100,6 @@ const Text = () => {
             </Box>
   );
     }
-
      const handleOpen = () => {
     setOpen(true);
   };
@@ -110,11 +113,10 @@ const Text = () => {
      };
 
      const voice = () =>{
-         navigate(`/voice?uuid=${videoUUID}`);
+         navigate(`/voice?uuid=${videoUUID}&email=${auth?.email || ''}`);
      };
   return (
       <>
-          <TopBar isVideoUploaded={isVideoUploaded}/>
           <Stack sx={{ width: '100%' }} spacing={5}>
               {alertVisible &&(
               <Alert severity="warning"
@@ -273,7 +275,27 @@ const Text = () => {
 
                <Accordion defaultExpanded>
                   <AccordionSummary expandIcon={<ExpandMoreIcon />} aria-controls="panel2a-content" id="panel2a-header">
-                      <Typography style={{fontSize: '30px'}}>Speed of Speech</Typography>
+                      <Typography style={{fontSize: '30px'}}>Speed of Speech
+                          <Tooltip title={
+                             <Typography style={{ fontSize: '1rem' }}>
+                                  If your speaking rate is too slow, it might bore or disengage your audience.
+                                 Increase your pace by practicing with timed speeches and focusing on key points.
+                                 For a rate that's too fast, leading to comprehension issues, practice slowing down and enunciating clearly.
+                             </Typography>} arrow
+                                  sx={{
+                                      '.MuiTooltip-tooltip': {
+                                          backgroundColor: 'gray',
+                                          color: 'white',
+                                          fontSize: '1rem',
+                                          padding: '16px 20px',
+                                      }
+                         }}
+                         >
+                              <IconButton aria-label="help">
+                                  <HelpOutlineIcon />
+                              </IconButton>
+                          </Tooltip>
+                      </Typography>
                   </AccordionSummary>
                   <Divider style={{ margin: '10px 18px' }} />
                   <AccordionDetails>
@@ -293,7 +315,7 @@ const Text = () => {
                            Recommended Range (per Minutes)
                        </Typography>
                       <Divider style={{ margin: '10px 10px' }} />
-                      <Typography width={'40%'}>
+                      <Typography width={'50%'}>
                            {speedPlot && <img src={`data:image/png;base64,${speedPlot}`} alt="Generated Plot"/>}
                       </Typography>
                   </AccordionDetails>

@@ -1,15 +1,14 @@
-import {TopBar} from "./App";
 import Card from 'react-bootstrap/Card';
 import Button from '@mui/material/Button'
 import './homePage.css';
 import {Link} from "react-router-dom";
-import {useState} from "react";
+
+
 
 const HomePage = () => {
-     const [isVideoUploaded, setIsVideoUploaded] = useState(false);
+    const auth = JSON.parse(sessionStorage.getItem('auth'));
   return (
       <>
-          <TopBar isVideoUploaded={isVideoUploaded}/>
           <Card className="text-center">
               <Card.Header>Welcome to Speak Trainer :)</Card.Header>
               <Card.Body>
@@ -20,7 +19,7 @@ const HomePage = () => {
                       Start your journey now!
                   </Card.Text>
                  <div className="container">
-                     <Link to="/questionnaire">
+                     <Link to={`/step`}>
                          <Button variant="contained" size="large">   Start   </Button>
                      </Link>
                  </div>
